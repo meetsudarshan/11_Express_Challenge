@@ -1,34 +1,54 @@
-// Import fs & util
-const fs = require('fs');
-const util = require('util');
-
-// Import express.js
 const express = require('express');
-// Import 'path' package
+const fs = require('fs');
 const path = require('path');
 
-// Port the server will run
+const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize instance of Express.js
-const app = express();
-
-// Middleware for parsing JSON and urlencoded form data
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.static('public'));
 
-// Static middleware pointing to the public folder
-app.use(express.static('assets'));
+app.get('/api/notes', (req, res) => {
+  const savedNotes = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'notes.json')));
 
-// GET route for home page
+  res.json(savedNotes);
+});
+
+app.post('/api/notes', (req, res) => {
+  const savedNotes = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'notes.json')));
+
+  const newNote = {
+    id: Date.now(),
+    title: req.body.title,
+    text: req.body.text,
+  };
+
+  savedNotes.push(newNote);
+
+  fs.writeFileSync(path.join(__dirname, 'data', 'notes.json'), JSON.stringify(savedNotes));
+
+  res.json(newNote);
+});
+
+app.delete('/api/notes/:id', (req, res) => {
+  const savedNotes = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'notes.json')));
+
+  const filteredNotes = savedNotes.filter((note) => note.id !== parseInt(req.params.id));
+
+  fs.writeFileSync(path.join(__dirname, 'data', 'notes.json'), JSON.stringify(filteredNotes));
+
+  res.sendStatus(200);
+});
+
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// GET route for notes page
 app.get('/notes', (req, res) => {
-    res.sendFile(path.join(__dirname, 'notes.html'));
+  res.sendFile(path.join(__dirname, 'public', 'notes.html'));
 });
 
-// LISTEN for incoming connections on the specified port 
-app.listen(PORT, () => console.log(`App listening on port http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server listening on PORT ${PORT}`);
+});
